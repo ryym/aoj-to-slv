@@ -3,15 +3,21 @@ package main
 import (
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 func NewProblem(probName string) (Problem, error) {
-	return &ProblemImpl{probName}, nil
+	return &ProblemImpl{
+		Name:         probName,
+		problemIdRgx: regexp.MustCompile("[A-Z]+\\d?_\\d+_[A-Z]"),
+		// wrongProblemIdRgx: regexp.MustCompile("[A-Z]{3,4}\\d+?_\\d+_[A-Z]"),
+	}, nil
 }
 
 type ProblemImpl struct {
-	Name string
+	Name         string
+	problemIdRgx *regexp.Regexp
 }
 
 func (p *ProblemImpl) FindTestFile(files []string) ([]string, string) {
@@ -50,6 +56,26 @@ func (p *ProblemImpl) FindFastestSrc(srcs []string) string {
 	}
 
 	return srcs[0]
+}
+
+func (p *ProblemImpl) FindProblemId(srcFiles []string) (string, error) {
+	for _, src := range srcFiles {
+		content, err := ioutil.ReadFile(src)
+		if err != nil {
+			return "", err
+		}
+
+		b := p.problemIdRgx.Find(content)
+		if b == nil {
+			return "", nil
+		}
+
+		id := string(b)
+		if id != "" {
+			return id, nil
+		}
+	}
+	return "", nil
 }
 
 func NewProblemFinder() ProblemFinder {

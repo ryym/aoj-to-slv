@@ -3,11 +3,14 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 )
+
+const AOJ_PROBLEM_URL = "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp"
 
 func ConvertAll(app *App, dir string) error {
 	prbs, err := app.PrbFinder.ListProblems(dir)
@@ -22,6 +25,13 @@ func ConvertAll(app *App, dir string) error {
 		if err != nil {
 			fmt.Println("")
 			return err
+		}
+
+		for _, f := range files {
+			err = os.Remove(f)
+			if err != nil {
+				return errors.Wrapf(err, "%s: Failed to remove %s", name, f)
+			}
 		}
 
 		fmt.Println(" Done")
@@ -40,13 +50,13 @@ func Convert(app *App, dir string, prbName string, prbFiles []string) error {
 	stat, err := os.Stat(probDir)
 	if err == nil {
 		if stat.IsDir() {
-			// err = os.RemoveAll(probDir)
-			// if err != nil {
-			// 	return errors.Wrapf(err, "%s: Failed to remove old slv dir", prbName)
-			// }
+			err = os.RemoveAll(probDir)
+			if err != nil {
+				return errors.Wrapf(err, "%s: Failed to remove old slv dir", prbName)
+			}
 
 			// 既にあるやつは無視する。
-			return nil
+			// return nil
 		} else {
 			return fmt.Errorf("%s: Same name file exists", prbName)
 		}
@@ -123,6 +133,18 @@ func Convert(app *App, dir string, prbName string, prbFiles []string) error {
 				return errors.Wrapf(err, "%s: TEST FAIL: %s", prbName, string(out))
 			}
 		}
+	}
+
+	problemId, err := prb.FindProblemId(srcFiles)
+	if err != nil {
+		return errors.Wrapf(err, "%s: Failed to find problem ID", prbName)
+	}
+	if problemId != "" {
+		ioutil.WriteFile(
+			filepath.Join(probDir, "readme.md"),
+			[]byte(fmt.Sprintf("<%s?id=%s>\n", AOJ_PROBLEM_URL, problemId)),
+			0644,
+		)
 	}
 
 	return nil

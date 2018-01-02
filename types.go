@@ -9,6 +9,7 @@ type ProblemFinder interface {
 type Problem interface {
 	FindTestFile(files []string) ([]string, string)
 	FindFastestSrc(srcs []string) string
+	FindProblemId(srcFiles []string) (string, error)
 }
 
 type TestData interface {
